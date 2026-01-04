@@ -1,0 +1,95 @@
+{
+  "name": "codeatlas",
+  "displayName": "CodeAtlas: AI-Powered Codebase Visualizer",
+  "description": "Transform your codebase into interactive architecture diagrams using local AI models (Ollama). 100% private, completely free.",
+  "version": "0.1.0",
+  "publisher": "time-ai-net",
+  "author": {
+    "name": "CodeAtlas Contributors"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/time-ai-net/codeatlas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/time-ai-net/codeatlas/issues"
+  },
+  "homepage": "https://github.com/time-ai-net/codeatlas#readme",
+  "keywords": [
+    "architecture",
+    "visualization",
+    "ai",
+    "ollama",
+    "codebase",
+    "diagram",
+    "mermaid",
+    "code-analysis"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onCommand:codeatlas.analyze"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeatlas.analyze",
+        "title": "CodeAtlas: Analyze Architecture",
+        "category": "CodeAtlas"
+      }
+    ],
+    "configuration": {
+      "title": "CodeAtlas",
+      "properties": {
+        "codeatlas.ollamaModel": {
+          "type": "string",
+          "default": "qwen2.5-coder:3b",
+          "description": "Ollama model to use for code analysis",
+          "enum": [
+            "qwen2.5-coder:3b",
+            "qwen2.5-coder:7b",
+            "deepseek-coder:6.7b",
+            "codellama:7b"
+          ]
+        },
+        "codeatlas.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama API server URL",
+          "pattern": "^https?://.*"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.54.0",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3"
+  }
+}

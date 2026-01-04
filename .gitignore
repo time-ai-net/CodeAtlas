@@ -1,0 +1,42 @@
+# Node modules
+node_modules/
+
+# Build output
+out/
+dist/
+build/
+*.vsix
+
+# Test directories
+.vscode-test/
+test-workspace/
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE files
+.vscode/*.log
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+test-*.js
+debug-*.js
+check-*.js
+package-lock.json
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
