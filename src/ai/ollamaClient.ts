@@ -94,8 +94,8 @@ Return ONLY the JSON object now (no other text):`;
                     if (parsed.relationships && Array.isArray(parsed.relationships)) {
                         const moduleSet = new Set();
                         parsed.relationships.forEach((r: any) => {
-                            if (r.from) moduleSet.add(r.from);
-                            if (r.to) moduleSet.add(r.to);
+                            if (r.from) {moduleSet.add(r.from);}
+                            if (r.to) {moduleSet.add(r.to);}
                         });
                         parsed.modules = Array.from(moduleSet);
                         this.logger.info(`Extracted ${parsed.modules.length} modules from relationships`);
@@ -164,7 +164,7 @@ Return ONLY the JSON object now (no other text):`;
     async listModels(): Promise<string[]> {
         try {
             const response = await fetch(`${this.baseUrl}/api/tags`);
-            if (!response.ok) return [];
+            if (!response.ok) {return [];}
             const data = await response.json();
             const modelsData = data as any;
             return modelsData.models?.map((m: any) => m.name) || [];
