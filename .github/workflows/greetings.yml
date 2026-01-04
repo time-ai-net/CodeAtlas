@@ -1,0 +1,33 @@
+name: Greet New Contributors
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            👋 Thanks for opening your first issue! We appreciate your contribution to CodeAtlas.
+            
+            Please make sure you've provided all the requested information in the issue template.
+            A maintainer will review this soon.
+          pr-message: |
+            🎉 Thanks for opening your first pull request! We're excited to review your contribution.
+            
+            Please make sure:
+            - [ ] Your code follows our coding guidelines
+            - [ ] All tests pass
+            - [ ] You've updated documentation if needed
+            
+            A maintainer will review this shortly.

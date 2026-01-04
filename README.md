@@ -1,8 +1,8 @@
 # CodeAtlas: AI-Powered Codebase Visualizer
 
-[![License: MIT](https://img.shields.io/github/license/time-ai-net/codeatlas)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/time-ai-net/codeatlas)](https://github.com/time-ai-net/codeatlas/releases)
-[![GitHub issues](https://img.shields.io/github/issues/time-ai-net/codeatlas)](https://github.com/time-ai-net/codeatlas/issues)
+[![License: MIT](https://img.shields.io/github/license/time-ai-net/CodeAtlas)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/time-ai-net/CodeAtlas)](https://github.com/time-ai-net/CodeAtlas/releases)
+[![GitHub issues](https://img.shields.io/github/issues/time-ai-net/CodeAtlas)](https://github.com/time-ai-net/CodeAtlas/issues)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **CodeAtlas** transforms complex codebases into interactive, easy-to-understand architecture diagrams directly within VS Code. Powered by **local Ollama models** for fast, private, and completely free code analysis.
