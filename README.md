@@ -1,7 +1,6 @@
 # CodeAtlas
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/time-ai-net/CodeAtlas/workflows/CI/badge.svg)](https://github.com/time-ai-net/CodeAtlas/actions)
 [![GitHub Issues](https://img.shields.io/github/issues/time-ai-net/CodeAtlas.svg)](https://github.com/time-ai-net/CodeAtlas/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/time-ai-net/CodeAtlas.svg)](https://github.com/time-ai-net/CodeAtlas/stargazers)
 
