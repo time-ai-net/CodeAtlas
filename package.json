@@ -1,0 +1,30 @@
+{
+  "name": "codeatlas-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CodeAtlas - AI-powered code architecture analysis (Monorepo)",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build --workspace=@codeatlas/core",
+    "build:extension": "npm run compile --workspace=@codeatlas/vscode-extension",
+    "build:web": "npm run build --workspace=@codeatlas/web-app",
+    "dev:web": "npm run dev --workspace=@codeatlas/web-app",
+    "dev:core": "npm run watch --workspace=@codeatlas/core",
+    "watch:core": "npm run watch --workspace=@codeatlas/core",
+    "dev": "concurrently \"npm run watch:core\" \"npm run dev:web\"",
+    "test": "npm test --workspaces --if-present",
+    "clean": "rm -rf packages/*/dist packages/*/out packages/*/node_modules node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
