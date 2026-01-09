@@ -25,15 +25,16 @@ export default function DiagramView({ diagram, className = '' }: DiagramViewProp
 
     mermaid.initialize({
       startOnLoad: false,
-      theme: 'neutral',
+      theme: 'base',
       securityLevel: 'loose',
       flowchart: {
         useMaxWidth: true,
         htmlLabels: true,
         curve: 'basis',
-        padding: 20,
-        nodeSpacing: 50,
-        rankSpacing: 80,
+        padding: 25,
+        nodeSpacing: 60,
+        rankSpacing: 100,
+        diagramPadding: 20,
       },
       themeVariables: {
         primaryColor: '#3B82F6',
@@ -47,6 +48,11 @@ export default function DiagramView({ diagram, className = '' }: DiagramViewProp
         textColor: '#111827',
         fontSize: '14px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
+        edgeLabelBackground: '#F9FAFB',
+        clusterBkg: '#F3F4F6',
+        clusterBorder: '#D1D5DB',
+        defaultLinkColor: '#6B7280',
+        titleColor: '#111827',
       },
     });
 
@@ -144,8 +150,14 @@ export default function DiagramView({ diagram, className = '' }: DiagramViewProp
       
       <div 
         ref={diagramRef} 
-        className={`p-6 overflow-auto bg-gray-50 ${isLoading ? 'hidden' : ''} ${error ? 'hidden' : ''}`}
-        style={{ maxHeight: '600px', minHeight: '400px' }}
+        className={`p-8 overflow-auto bg-white ${isLoading ? 'hidden' : ''} ${error ? 'hidden' : ''}`}
+        style={{ 
+          maxHeight: '700px', 
+          minHeight: '500px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start'
+        }}
       />
     </div>
   );
