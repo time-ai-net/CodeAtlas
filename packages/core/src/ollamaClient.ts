@@ -67,7 +67,7 @@ export class OllamaClient {
         // Use RAG-based file selection to reduce processing time
         // Select only the most important files for analysis
         FileSelector.setLogger(this.logger);
-        const maxFiles = Math.min(15, Math.max(5, Math.floor(files.length * 0.15))); // Limit to 15% of files, min 5, max 15
+        const maxFiles = Math.min(10, Math.max(5, Math.floor(files.length * 0.10))); // Limit to 10% of files, min 5, max 10 (optimized for speed)
         const selectedFiles = files.length > maxFiles 
             ? FileSelector.selectImportantFiles(files, maxFiles)
             : files;
@@ -83,7 +83,7 @@ export class OllamaClient {
         const isTestSuite = testFileCount > selectedFiles.length / 2;
 
         // Split files into chunks for parallel processing
-        const chunkSize = 3; // Process 3 files per chunk
+        const chunkSize = 5; // Process 5 files per chunk (increased for faster processing, fewer chunks = less overhead)
         const chunks: FileContext[][] = [];
         for (let i = 0; i < selectedFiles.length; i += chunkSize) {
             chunks.push(selectedFiles.slice(i, i + chunkSize));
@@ -127,7 +127,7 @@ export class OllamaClient {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    timeout: 120000, // 2 minutes per chunk (reduced from 5)
+                    timeout: 60000, // 1 minute per chunk (optimized for speed)
                     body: JSON.stringify({
                         model: this.model,
                         messages: [
@@ -144,7 +144,7 @@ export class OllamaClient {
                         format: 'json',
                         options: {
                             temperature: 0.0,
-                            num_predict: 4000, // Reduced for smaller chunks
+                            num_predict: 2000, // Reduced for faster generation
                             top_p: 0.9,
                             top_k: 40,
                             stop: ['```', '```json']
@@ -161,7 +161,7 @@ export class OllamaClient {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    timeout: 120000,
+                    timeout: 60000, // 1 minute per chunk
                     body: JSON.stringify({
                         model: this.model,
                         prompt: prompt + '\n\nCRITICAL: Return ONLY valid JSON. No markdown, no code blocks, no explanations. Start with { and end with }.',
@@ -169,7 +169,7 @@ export class OllamaClient {
                         format: 'json',
                         options: {
                             temperature: 0.0,
-                            num_predict: 4000,
+                            num_predict: 2000, // Reduced for faster generation
                             top_p: 0.9,
                             top_k: 40,
                             stop: ['```', '```json']
@@ -208,8 +208,10 @@ export class OllamaClient {
                 return this.createFallbackAnalysis(chunkFiles);
             }
             
-            this.logger.info(`[Chunk ${chunkIndex}/${totalChunks}] Response length: ${fullResponse.length} chars`);
-            this.logger.info(`[Chunk] Response preview: ${fullResponse.substring(0, 200)}...`);
+            // Reduced logging for speed - only log if response is suspiciously short
+            if (fullResponse.length < 100) {
+                this.logger.info(`[Chunk ${chunkIndex}/${totalChunks}] Short response: ${fullResponse.length} chars`);
+            }
             
             // Parse the response using comprehensive parsing logic
             return this.parseOllamaResponse(fullResponse, chunkFiles);
@@ -280,11 +282,11 @@ Return ONLY valid JSON with these exact fields:
 
 Files to analyze (${chunkFiles.length} of ${allFiles.length} files):
 ${chunkFiles.map((f, idx) => {
-    const maxLength = idx < 2 ? 1500 : 800;
+    const maxLength = idx < 2 ? 1000 : 500; // Reduced for faster processing
     const content = f.content.substring(0, maxLength);
     const truncated = f.content.length > maxLength;
     return `=== File: ${f.path} ===
-${content}${truncated ? '\n... (truncated for brevity)' : ''}
+${content}${truncated ? '\n... (truncated)' : ''}
 `;
 }).join('\n\n')}
 
@@ -367,11 +369,11 @@ Return ONLY valid JSON in this EXACT format:
 
 Files to analyze (${chunkFiles.length} of ${allFiles.length} files):
 ${chunkFiles.map((f, idx) => {
-    const maxLength = idx < 2 ? 1500 : 800;
+    const maxLength = idx < 2 ? 1000 : 500; // Reduced for faster processing
     const content = f.content.substring(0, maxLength);
     const truncated = f.content.length > maxLength;
     return `=== File: ${f.path} ===
-${content}${truncated ? '\n... (truncated for brevity)' : ''}
+${content}${truncated ? '\n... (truncated)' : ''}
 `;
 }).join('\n\n')}
 
