@@ -61,19 +61,122 @@ export class OllamaClient {
         this.baseUrl = baseUrl;
     }
 
+    /**
+     * Validates that the LLM endpoint is working and can generate responses
+     */
+    private async validateLLMEndpoint(): Promise<boolean> {
+        try {
+            this.logger.info(`Validating LLM endpoint at ${this.baseUrl}...`);
+            
+            // Test with a simple prompt to verify the endpoint works
+            const testPrompt = 'Return JSON: {"test": "ok"}';
+            
+            try {
+                const response = await fetchJson(`${this.baseUrl}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    timeout: 20000, // 20 seconds for validation (model may need to load)
+                    body: JSON.stringify({
+                        model: this.model,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: testPrompt
+                            }
+                        ],
+                        stream: false,
+                        options: {
+                            num_predict: 50, // Very short for validation
+                            temperature: 0.0
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    this.logger.error(`LLM endpoint validation failed: HTTP ${response.status}`);
+                    return false;
+                }
+                
+                const data = await response.json();
+                const content = data.message?.content || data.response || '';
+                
+                if (!content || content.trim().length === 0) {
+                    this.logger.error('LLM endpoint returned empty response');
+                    return false;
+                }
+                
+                this.logger.info(`✓ LLM endpoint validated successfully (response length: ${content.length} chars)`);
+                return true;
+                
+            } catch (chatError: any) {
+                // Try generate API as fallback
+                this.logger.info('Chat API failed, trying generate API for validation...');
+                try {
+                    const response = await fetchJson(`${this.baseUrl}/api/generate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        timeout: 10000,
+                        body: JSON.stringify({
+                            model: this.model,
+                            prompt: testPrompt,
+                            stream: false,
+                            options: {
+                                num_predict: 50,
+                                temperature: 0.0
+                            }
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        this.logger.error(`LLM endpoint validation failed: HTTP ${response.status}`);
+                        return false;
+                    }
+                    
+                    const data = await response.json();
+                    const content = data.response || '';
+                    
+                    if (!content || content.trim().length === 0) {
+                        this.logger.error('LLM endpoint returned empty response');
+                        return false;
+                    }
+                    
+                    this.logger.info(`✓ LLM endpoint validated successfully (response length: ${content.length} chars)`);
+                    return true;
+                } catch (generateError: any) {
+                    this.logger.error(`LLM endpoint validation failed: ${generateError.message}`);
+                    return false;
+                }
+            }
+        } catch (error: any) {
+            this.logger.error(`LLM endpoint validation error: ${error.message}`);
+            return false;
+        }
+    }
+
     async analyze(files: FileContext[]): Promise<ArchitectureAnalysis> {
+        // Validate LLM endpoint before proceeding
+        const isValid = await this.validateLLMEndpoint();
+        if (!isValid) {
+            this.logger.error('LLM endpoint validation failed. Using fallback analysis only.');
+            // Return fallback analysis based on file structure
+            return this.createFallbackAnalysis(files);
+        }
+
         this.logger.info(`Sending request to Ollama (${this.model})...`);
 
         // Use RAG-based file selection to reduce processing time
         // Select only the most important files for analysis
         FileSelector.setLogger(this.logger);
-        const maxFiles = Math.min(10, Math.max(5, Math.floor(files.length * 0.10))); // Limit to 10% of files, min 5, max 10 (optimized for speed)
+        const maxFiles = Math.min(5, Math.max(5, Math.floor(files.length * 0.05))); // Limit to 5% of files, min 5, max 5 (maximum speed)
         const selectedFiles = files.length > maxFiles 
             ? FileSelector.selectImportantFiles(files, maxFiles)
             : files;
         
         this.logger.info(`Selected ${selectedFiles.length} files from ${files.length} total files for analysis`);
-        this.logger.info(`Selected files: ${selectedFiles.map(f => f.path).join(', ')}`);
 
         // Detect if this is primarily a test suite
         const testFileCount = selectedFiles.filter(f => 
@@ -83,7 +186,7 @@ export class OllamaClient {
         const isTestSuite = testFileCount > selectedFiles.length / 2;
 
         // Split files into chunks for parallel processing
-        const chunkSize = 5; // Process 5 files per chunk (increased for faster processing, fewer chunks = less overhead)
+        const chunkSize = 5; // Process 5 files per chunk (optimal balance - max speed without timeout risk)
         const chunks: FileContext[][] = [];
         for (let i = 0; i < selectedFiles.length; i += chunkSize) {
             chunks.push(selectedFiles.slice(i, i + chunkSize));
@@ -127,13 +230,13 @@ export class OllamaClient {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    timeout: 60000, // 1 minute per chunk (optimized for speed)
+                    timeout: 60000, // 60 seconds per chunk (increased for reliability)
                     body: JSON.stringify({
                         model: this.model,
                         messages: [
                             {
                                 role: 'system',
-                                content: 'You are a JSON-only response generator. You MUST respond with ONLY valid JSON. Never use markdown code blocks, never add explanations before or after. Your response must start with { and end with }. You MUST include all required fields: modules (array), relationships (array), summary (string), pattern (object), and layers (array). Return complete JSON, not partial.'
+                                content: 'Return ONLY valid JSON. Start with {, end with }. Include: modules[], relationships[], summary, pattern{}, layers[].'
                             },
                             {
                                 role: 'user',
@@ -144,7 +247,7 @@ export class OllamaClient {
                         format: 'json',
                         options: {
                             temperature: 0.0,
-                            num_predict: 2000, // Reduced for faster generation
+                            num_predict: 2000, // Increased for complete JSON responses
                             top_p: 0.9,
                             top_k: 40,
                             stop: ['```', '```json']
@@ -161,15 +264,15 @@ export class OllamaClient {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    timeout: 60000, // 1 minute per chunk
+                    timeout: 60000, // 60 seconds per chunk (increased for reliability)
                     body: JSON.stringify({
                         model: this.model,
-                        prompt: prompt + '\n\nCRITICAL: Return ONLY valid JSON. No markdown, no code blocks, no explanations. Start with { and end with }.',
+                        prompt: prompt + '\n\nReturn ONLY valid JSON. Start with { and end with }.',
                         stream: false,
                         format: 'json',
                         options: {
                             temperature: 0.0,
-                            num_predict: 2000, // Reduced for faster generation
+                            num_predict: 2000, // Increased for complete JSON responses
                             top_p: 0.9,
                             top_k: 40,
                             stop: ['```', '```json']
@@ -179,7 +282,7 @@ export class OllamaClient {
             }
             
             const duration = Date.now() - startTime;
-            this.logger.info(`[Chunk ${chunkIndex}/${totalChunks}] Completed in ${Math.round(duration / 1000)}s`);
+            // Minimal logging for maximum speed
             
             if (!response.ok) {
                 throw new Error(`Ollama API error: ${response.status}`);
@@ -208,13 +311,42 @@ export class OllamaClient {
                 return this.createFallbackAnalysis(chunkFiles);
             }
             
-            // Reduced logging for speed - only log if response is suspiciously short
-            if (fullResponse.length < 100) {
-                this.logger.info(`[Chunk ${chunkIndex}/${totalChunks}] Short response: ${fullResponse.length} chars`);
+            // Log response for debugging
+            this.logger.info(`[Chunk ${chunkIndex}/${totalChunks}] Response received: ${fullResponse.length} chars`);
+            this.logger.info(`[Chunk] Response preview (first 300 chars): ${fullResponse.substring(0, 300)}...`);
+            
+            // Validate response quality
+            if (fullResponse.length < 50) {
+                this.logger.error(`[Chunk ${chunkIndex}/${totalChunks}] Response too short (${fullResponse.length} chars) - likely invalid`);
+                this.logger.error(`[Chunk] Full response: ${fullResponse}`);
+                return this.createFallbackAnalysis(chunkFiles);
+            }
+            
+            // Check if response looks like JSON (starts with { or [)
+            const trimmed = fullResponse.trim();
+            if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+                this.logger.error(`[Chunk ${chunkIndex}/${totalChunks}] Response doesn't look like JSON`);
+                this.logger.error(`[Chunk] Response starts with: ${trimmed.substring(0, 100)}`);
+                this.logger.error(`[Chunk] Full response: ${fullResponse.substring(0, 500)}`);
+                return this.createFallbackAnalysis(chunkFiles);
             }
             
             // Parse the response using comprehensive parsing logic
-            return this.parseOllamaResponse(fullResponse, chunkFiles);
+            this.logger.info(`[Chunk ${chunkIndex}/${totalChunks}] Attempting to parse response...`);
+            const parsed = this.parseOllamaResponse(fullResponse, chunkFiles);
+            
+            // Validate parsed response has meaningful data
+            if (!parsed.modules || parsed.modules.length === 0) {
+                this.logger.error(`[Chunk ${chunkIndex}/${totalChunks}] Parsed response has no modules`);
+                this.logger.error(`[Chunk] Parsed keys: ${Object.keys(parsed).join(', ')}`);
+                this.logger.error(`[Chunk] Raw response (first 500 chars): ${fullResponse.substring(0, 500)}`);
+                return this.createFallbackAnalysis(chunkFiles);
+            }
+            
+            // Log success
+            this.logger.info(`[Chunk ${chunkIndex}/${totalChunks}] ✓ Successfully parsed: ${parsed.modules.length} modules, ${parsed.relationships?.length || 0} relationships`);
+            
+            return parsed;
             
         } catch (error: any) {
             this.logger.error(`[Chunk ${chunkIndex}/${totalChunks}] Failed: ${error.message}`);
@@ -282,7 +414,7 @@ Return ONLY valid JSON with these exact fields:
 
 Files to analyze (${chunkFiles.length} of ${allFiles.length} files):
 ${chunkFiles.map((f, idx) => {
-    const maxLength = idx < 2 ? 1000 : 500; // Reduced for faster processing
+    const maxLength = idx < 2 ? 800 : 500; // Increased for better context
     const content = f.content.substring(0, maxLength);
     const truncated = f.content.length > maxLength;
     return `=== File: ${f.path} ===
@@ -292,7 +424,7 @@ ${content}${truncated ? '\n... (truncated)' : ''}
 
 Note: This is chunk ${chunkIndex} of ${totalChunks}. The full codebase has ${allFiles.length} files total.
 
-Return ONLY the JSON object (no markdown, no extra text):
+JSON:
 ` : `You are an expert software architect analyzing a codebase. Perform a comprehensive architectural analysis.
 
 TASK: Analyze the code structure and identify:
@@ -369,7 +501,7 @@ Return ONLY valid JSON in this EXACT format:
 
 Files to analyze (${chunkFiles.length} of ${allFiles.length} files):
 ${chunkFiles.map((f, idx) => {
-    const maxLength = idx < 2 ? 1000 : 500; // Reduced for faster processing
+    const maxLength = idx < 2 ? 800 : 500; // Increased for better context
     const content = f.content.substring(0, maxLength);
     const truncated = f.content.length > maxLength;
     return `=== File: ${f.path} ===
